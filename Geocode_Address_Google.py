@@ -12,7 +12,7 @@ class pygeomaps:
     def __init__(self):
         import ConfigParser
         config = ConfigParser.ConfigParser()
-        config.read('C:/GeoPy/GeoPy.conf')
+        config.read('~/GeoPy.conf')
         self.api_key=config.get('geopy_config', 'api_key')
         self.place_id_search_link=config.get('geopy_config', 'place_id_search_link')
         self.nearby_search_link_location=config.get('geopy_config', 'nearby_search_link_location')
@@ -27,24 +27,6 @@ class pygeomaps:
         self.place_type=''
         self.rpt_name=''
         self.circle_colour='#ffcc99'
-
-
-    def get_tiv_for_addr(self,addr):
-        from mysql.connector import MySQLConnection,Error
-        tiv_amt = 0
-        try:
-            conn = MySQLConnection(host='localhost', database='mysql', user='root', password='password')
-            cursor = conn.cursor()
-            cursor.execute("SELECT sum(COMPANY_TIV),COMPANY_ADDR FROM train_set.COMPANY_INFO "
-                           "where IS_SCRUBBED=%s and COMPANY_ADDR=%s GROUP BY COMPANY_ADDR",['D',addr])
-            (tiv_amt,adr)=cursor.fetchone()
-            #print tiv_amt
-        except Error as e:
-            print(e)
-        finally:
-            cursor.close()
-            conn.close()
-            return tiv_amt
 
     def find_all_addresses_with_in_x_km_radius_of_y(self,y,x,option):
         try:
@@ -157,44 +139,7 @@ class pygeomaps:
             geocode_result.append('NOK')
             return geocode_result
 
-
-    def read_addresses_to_process(self):
-        from mysql.connector import MySQLConnection,Error
-        try:
-            addr_list =[]
-            conn = MySQLConnection(host='localhost', database='mysql', user='root', password='password')
-            cursor = conn.cursor()
-            cursor.execute("SELECT distinct(COMPANY_ADDR) FROM train_set.company_info where IS_SCRUBBED IS NULL")
-            #cursor returns a tuple
-            for (row) in cursor:
-                addr_list.append(row)
-        except Error as e:
-            print(e)
-        finally:
-            cursor.close()
-            conn.close()
-            return addr_list
-
-    def insert_geocode_result(self,gr):
-        from mysql.connector import MySQLConnection, Error
-
-        query = "INSERT INTO train_set.geo_scrub_addr" \
-                "(RAW_ADDR,SCRUB_STS,ADDR_TYPE,SCRUB_TYPE,SCRUB_ADDR,REQUEST_LINK,LATITUDE,LONGITUDE,G_PLACE_ID) " \
-                "values (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-        try:
-            conn = MySQLConnection(host='localhost', database='mysql', user='root', password='password')
-            cursor = conn.cursor()
-            cursor.execute(query, gr)
-            cursor.execute("UPDATE train_set.company_info set IS_SCRUBBED=%s where COMPANY_ADDR=%s",('D',gr[0]))
-            # accept the changes
-            conn.commit()
-        except Error as error:
-            print(error)
-        finally:
-            cursor.close()
-            conn.close()
-
-    def get_qualifying_locations_risk_circle(self,center_lat,center_lon,distancekm):
+    def get_qualifying_locations_risk_circle_against_table(self,center_lat,center_lon,distancekm):
         from mysql.connector import MySQLConnection, Error
         import math
         ret_list = []
@@ -257,115 +202,33 @@ class pygeomaps:
                     final_list.append([company_name, latitude, longitude, distance])
         return final_list
 
-    def prepare_html_report(self,hdr_data,rpt_data):
+    #hdr_data = ['Name','Age','Gender','Salary']
+    #rpt_recs = [['Bishnu','25','M','100'],['Raja','29','M','200'],['Rani','18','F','300']]
+    def prepare_html_report(self,hdr_data,rpt_recs,rpt_name):
         try:
-            HTMLFILE = 'C:/GeoPy/'+ self.rpt_name + '_rpt.html'
+            HTMLFILE = '~/'+ self.rpt_name + '_rpt.html'
+            dtl_data=[]
             f = open(HTMLFILE, 'w')
             f.write('<html><body><h1>')
-            f.write('Report for Center :'+ self.addr)
+            f.write('Report for '+ rpt_name)
             f.write('</h1>')
-            f.write('<table border = "1">')
+            f.write('<table border = "2">')
             f.write('<tr>')
             for head in hdr_data:
                 f.write('<th>')
                 f.write(head)
                 f.write('</th>')
             f.write('</tr>')
-            for data in rpt_data:
-                f.write(data)
+            dtl_str="<tr><td>"
+            for data in rpt_recs:
+                for i in range(0,len(rpt_recs[data])):
+                    dtl_str=dtl_str+str(rpt_recs[data][i]) + "</td><td>"
+                    dtl_data.append( dtl_str + "</tr>")
+                f.write(dtl_data)
         except Exception, e1:
             print str(e1)
-
-
-pgm = pygeomaps()
-user_input=raw_input("What do you want to do?\n\t Press 1 for Geocode addresses from table"
-                     "\n\t Press 2 for Creating a risk circle for any address based on a radius limit"
-                         "\n\t Press 3 for geocoding a single random address"
-                        "\n\t Press 4 for finding places of interest around a specific address"
-                        "\n\t Press any other key to exit\n\t:")
-if user_input=='1':
-    link_list = pgm.read_addresses_to_process()
-    if len(link_list) == 0:
-        print "No Records to process in the table."
-    else:
-        for (link,) in link_list:
-            print link
-            gr=pgm.geocode_address(link)
-            pgm.insert_geocode_result(gr)
-elif user_input == '2':
-    #Make sure that this address is a valid ROOFTOP address eg: Walmart Store , Dell Office and not some random address
-    # Radius is in KM
-    center_addr=raw_input("\nPlease enter the center address:\n")
-    rad = int(raw_input("\nPlease enter the radius limit in KM:\n"))
-    addr_list = pgm.find_all_addresses_with_in_x_km_radius_of_y(center_addr,rad,user_input)
-    #[company_name,tiv,raw_addr,latitude,longitude,distance]
-    lat=[]
-    lon=[]
-    title=[]
-    rpt_data=[]
-    total_tiv=0
-    total_locs=len(addr_list)
-    if total_locs > 0:
-        for data in range(total_locs):
-            lat.append(addr_list[data][3]) #Lat
-            lon.append(addr_list[data][4]) #Lon
-            title.append(str(addr_list[data][5])) #Distance in km from center
-            rpt_data.append("<tr><td>" + str(addr_list[data][0]) +
-                             "</td><td>" + str(addr_list[data][1]) +
-                             "</td><td>" + str(addr_list[data][2]) +
-                             "</td><td>" + str(addr_list[data][3]) +
-                             "</td><td>" + str(addr_list[data][4]) +
-                             "</td><td>" + str(addr_list[data][5]) +
-                             "</tr>")
-        pgm.rpt_name='risk_circle'
-        pgm.plot_addresses_on_google_map(lat,lon,title)
-        hdr_data = ['Company Name', 'TIV', 'Address', 'Latitude', 'Longitude', 'Distance']
-        pgm.prepare_html_report(hdr_data,rpt_data)
-        print "Total Locations impacted : " + str(total_locs)
-        print "Please check the generated report for details."
-    else:
-        print "No other existing locations impacted"
-elif user_input == '3':
-    center_addr = raw_input("\nPlease enter the address to geocode:\n")
-    result = pgm.geocode_address(center_addr)
-    if len(result) !=0:
-        for value in range(len(result)):
-            print result[value]
-elif user_input == '4':
-    center_addr = raw_input("\nPlease enter the center address:\n")
-    rad = int(raw_input("\nPlease enter the radius limit in KM:\n"))
-    pgm.place_type = raw_input("\nPlease enter the place type:\n")
-    result = pgm.geocode_address(center_addr)
-    # Set the global variable to use as center during map plotting
-    pgm.lat = round(result[6], 6)
-    pgm.lon = round(result[7], 6)
-    pgm.addr = result[4]
-    if len(result) !=0:
-        print str(pgm.lat) + "," + str(pgm.lon)
-        addr_list = pgm.find_all_addresses_with_in_x_km_radius_of_y(center_addr,rad,user_input)
-        #[place, latitude, longitude, distance]
-        lat = []
-        lon = []
-        title = []
-        rpt_data = []
-        total_locs = len(addr_list)
-        if total_locs > 0:
-            for data in range(total_locs):
-                lat.append(addr_list[data][1])  # Lat
-                lon.append(addr_list[data][2])  # Lon
-                title.append(str(addr_list[data][0]))  # place name
-                rpt_data.append("<tr><td>" + str(addr_list[data][0]) +
-                                "</td><td>" + str(addr_list[data][1]) +
-                                "</td><td>" + str(addr_list[data][2]) +
-                                "</td><td>" + str(addr_list[data][3]) +
-                                "</tr>")
-            pgm.rpt_name = 'place_interest_' + pgm.place_type
-            pgm.plot_addresses_on_google_map(lat, lon, title)
-            hdr_data = ['Name', 'Latitude', 'Longitude', 'Distance']
-            pgm.prepare_html_report(hdr_data, rpt_data)
-elif user_input == '5':
-    center_addr = raw_input("\nPlease enter the address to plot on map:\n")
-    pgm.generate_map_for_location(center_addr)
-else:
-    print "You selected to exit.Have a nice day...."
-    exit()
+           
+pgm=pygeomaps()
+hdr_data = ['Name','Age','Gender','Salary']
+rpt_recs = [['Bishnu','25','M','100'],['Raja','29','M','200'],['Rani','18','F','300']]
+pgm.prepare_html_report(hdr_data,rpt_recs,'TRY1')
