@@ -1,2 +1,2 @@
-# QuoraScrappy
-A small scrappy implementation to scrap data from Stopbyte.com
+# MyTravelPlanner
+A program to plan your short/long trips
