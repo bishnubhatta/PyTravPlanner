@@ -12,7 +12,7 @@ class pygeomaps:
     def __init__(self):
         import ConfigParser
         config = ConfigParser.ConfigParser()
-        config.read('~/GeoPy.conf')
+        config.read("/home/bishnu/GeoPy.conf")
         self.api_key=config.get('geopy_config', 'api_key')
         self.place_id_search_link=config.get('geopy_config', 'place_id_search_link')
         self.nearby_search_link_location=config.get('geopy_config', 'nearby_search_link_location')
@@ -55,7 +55,7 @@ class pygeomaps:
         print "Center Location for this circle : " + self.addr
         gmap.marker(self.lat,self.lon,color='#FF0000',title=self.addr)
         gmap.circle(self.lat,self.lon,self.radius*1000,color=self.circle_colour)
-        output = "C:/GeoPy/"+self.rpt_name+"_gmap.html"
+        output = "/home/bishnu/"+self.rpt_name+"_gmap.html"
         gmap.draw(output)
 
     def generate_map_for_location(self,address):
@@ -68,7 +68,7 @@ class pygeomaps:
         gmap = gmplot.GoogleMapPlotter(self.lat, self.lon, 18)
         gmap.coloricon = "http://www.googlemapsmarkers.com/v1/%s/"
         gmap.marker(self.lat, self.lon, color='#FF0000', title=self.addr)
-        output = "C:/GeoPy/"+self.rpt_name+".html"
+        output = "/home/bishnu/"+self.rpt_name+".html"
         gmap.draw(output)
 
     def removeNonAscii(self,s):
@@ -206,29 +206,36 @@ class pygeomaps:
     #rpt_recs = [['Bishnu','25','M','100'],['Raja','29','M','200'],['Rani','18','F','300']]
     def prepare_html_report(self,hdr_data,rpt_recs,rpt_name):
         try:
-            HTMLFILE = '~/'+ self.rpt_name + '_rpt.html'
+            HTMLFILE = '/home/bishnu/'+ self.rpt_name + '_rpt.html'
             dtl_data=[]
             f = open(HTMLFILE, 'w')
             f.write('<html><body><h1>')
             f.write('Report for '+ rpt_name)
             f.write('</h1>')
-            f.write('<table border = "2">')
+            f.write('<table border = "1">')
             f.write('<tr>')
             for head in hdr_data:
                 f.write('<th>')
                 f.write(head)
                 f.write('</th>')
             f.write('</tr>')
-            dtl_str="<tr><td>"
             for data in rpt_recs:
-                for i in range(0,len(rpt_recs[data])):
-                    dtl_str=dtl_str+str(rpt_recs[data][i]) + "</td><td>"
-                    dtl_data.append( dtl_str + "</tr>")
-                f.write(dtl_data)
+                dtl_str="<tr><td>"
+                #print data
+                print len(data)
+                for i in range(0,len(data)):
+                    print data[i]
+                    dtl_str=dtl_str+str(data[i]) + "</td><td>"
+                print dtl_str
+                dtl_data.append( dtl_str + "</tr>")
+                print dtl_data
+            for dtl_rec in dtl_data:
+                f.write(dtl_rec)
         except Exception, e1:
             print str(e1)
            
 pgm=pygeomaps()
 hdr_data = ['Name','Age','Gender','Salary']
 rpt_recs = [['Bishnu','25','M','100'],['Raja','29','M','200'],['Rani','18','F','300']]
-pgm.prepare_html_report(hdr_data,rpt_recs,'TRY1')
+pgm.rpt_name='TRY1'
+pgm.prepare_html_report(hdr_data,rpt_recs,pgm.rpt_name)
