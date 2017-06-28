@@ -1,13 +1,3 @@
-#Place ID to details
-#https://maps.googleapis.com/maps/api/place/details/xml?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4&key=AIzaSyChZtdT2W7zA8w31Ft0unaeSPSypEkKFcI
-#Nearby Search by location
-#https://maps.googleapis.com/maps/api/place/nearbysearch/xml?location=-33.8670522,151.1957362&radius=500&type=restaurant&keyword=cruise&key=YOUR_API_KEY
-#Nearby Search by text
-#https://maps.googleapis.com/maps/api/place/textsearch/xml?query=restaurants+in+Sydney&key=YOUR_API_KEY
-#Nearby Search by text, location and radius
-#https://maps.googleapis.com/maps/api/place/textsearch/json?query=123+main+street&location=42.3675294,-71.186966&radius=10000&key=YOUR_API_KEY
-#Nearby search by Radar
-#https://maps.googleapis.com/maps/api/place/radarsearch/xml?location=51.503186,-0.126446&radius=5000&type=museum&key=YOUR_API_KEY
 class pygeomaps:
     def __init__(self):
         import ConfigParser
